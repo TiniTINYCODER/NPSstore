@@ -23,6 +23,7 @@ const btnNavInsights = document.getElementById('btnNavInsights');
 const panelImport = document.getElementById('panelImport');
 const panelInsights = document.getElementById('panelInsights');
 const storeFilter = document.getElementById('storeFilter');
+const areaFilter = document.getElementById('areaFilter');
 
 let selectedFile = null;
 
@@ -31,6 +32,7 @@ let chartTopNpsInstance = null;
 let chartBottomNpsInstance = null;
 let chartTrendsInstance = null;
 let npsTrendsData = []; // Cached data for filtering MoM trends
+let overallNpsData = []; // Cached data for filtering top/bottom leaderboards
 
 // --- Initialize App ---
 document.addEventListener('DOMContentLoaded', () => {
@@ -274,12 +276,45 @@ async function fetchTopBottomNps() {
         const response = await fetch('/api/analytics/nps/top-bottom');
         const data = await response.json();
         if (data.success) {
-            renderLeaderboards(data.data);
+            overallNpsData = data.data;
+            populateAreaFilter();
+            filterAndRenderLeaderboards();
         }
     } catch (err) {
         console.error('Error fetching top-bottom NPS:', err);
         showToast('Failed to load store leaderboards.', 'danger');
     }
+}
+
+function populateAreaFilter() {
+    const areas = [...new Set(overallNpsData.map(d => d.area))].sort();
+    const currentVal = areaFilter.value;
+    
+    areaFilter.innerHTML = '<option value="ALL">All Areas</option>';
+    
+    areas.forEach(a => {
+        const opt = document.createElement('option');
+        opt.value = a;
+        opt.textContent = a;
+        areaFilter.appendChild(opt);
+    });
+    
+    if (currentVal && areas.includes(currentVal)) {
+        areaFilter.value = currentVal;
+    } else {
+        areaFilter.value = 'ALL';
+    }
+}
+
+function filterAndRenderLeaderboards() {
+    const selectedArea = areaFilter.value;
+    
+    let filteredData = overallNpsData;
+    if (selectedArea !== 'ALL') {
+        filteredData = overallNpsData.filter(d => d.area === selectedArea);
+    }
+    
+    renderLeaderboards(filteredData);
 }
 
 function renderLeaderboards(records) {
@@ -396,6 +431,9 @@ function populateStoreFilter() {
 function setupFilters() {
     storeFilter.addEventListener('change', () => {
         renderTrendsChart();
+    });
+    areaFilter.addEventListener('change', () => {
+        filterAndRenderLeaderboards();
     });
 }
 

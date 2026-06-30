@@ -138,7 +138,13 @@
                     <div class="card chart-card">
                         <div class="card-header">
                             <h2><i class="fa-solid fa-ranking-star"></i> Store NPS Performance</h2>
-                            <span class="badge">NPS Range (-100 to +100)</span>
+                            <div class="filter-controls">
+                                <label for="areaFilter"><i class="fa-solid fa-location-dot"></i> Select Area:</label>
+                                <select id="areaFilter" class="form-select">
+                                    <option value="ALL">All Areas</option>
+                                </select>
+                                <span class="badge">NPS Range (-100 to +100)</span>
+                            </div>
                         </div>
                         
                         <div class="leaderboard-grid">
