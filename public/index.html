@@ -186,6 +186,12 @@
                                     <canvas id="chartBottomNps"></canvas>
                                 </div>
                             </div>
+                            <div class="chart-container">
+                                <h3 class="chart-title city-title"><i class="fa-solid fa-city"></i> Overall City NPS</h3>
+                                <div class="chart-wrapper">
+                                    <canvas id="chartCityNps"></canvas>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -193,12 +199,21 @@
                     <div class="card chart-card">
                         <div class="card-header trend-header">
                             <h2><i class="fa-solid fa-chart-line"></i> Month-on-Month NPS Trends</h2>
-                            <div class="filter-controls">
-                                <label for="storeFilter"><i class="fa-solid fa-store"></i> Compare Branch:</label>
-                                <select id="storeFilter" class="form-select">
-                                    <option value="ALL">All Branches Average</option>
-                                    <!-- Populated dynamically -->
-                                </select>
+                            <div class="trend-filters">
+                                <div class="filter-controls">
+                                    <label for="trendMode"><i class="fa-solid fa-sliders"></i> Trend Mode:</label>
+                                    <select id="trendMode" class="form-select">
+                                        <option value="STORE">Store Performance</option>
+                                        <option value="CITY">City Performance</option>
+                                    </select>
+                                </div>
+                                <div class="filter-controls">
+                                    <label id="compareFilterLabel" for="storeFilter"><i class="fa-solid fa-store"></i> Select Store:</label>
+                                    <select id="storeFilter" class="form-select">
+                                        <option value="ALL">All Stores Average</option>
+                                        <!-- Populated dynamically -->
+                                    </select>
+                                </div>
                             </div>
                         </div>
                         <div class="chart-container trend-container">

@@ -24,6 +24,8 @@ const panelImport = document.getElementById('panelImport');
 const panelInsights = document.getElementById('panelInsights');
 const storeFilter = document.getElementById('storeFilter');
 const areaFilter = document.getElementById('areaFilter');
+const trendMode = document.getElementById('trendMode');
+const compareFilterLabel = document.getElementById('compareFilterLabel');
 
 // Date Filter Elements
 const datePreset = document.getElementById('datePreset');
@@ -37,9 +39,13 @@ let selectedFile = null;
 // Chart JS Instances
 let chartTopNpsInstance = null;
 let chartBottomNpsInstance = null;
+let chartCityNpsInstance = null;
 let chartTrendsInstance = null;
-let npsTrendsData = []; // Cached data for filtering MoM trends
+
+let npsTrendsData = []; // Cached data for filtering MoM trends (unfiltered)
+let cityTrendsData = []; // Cached data for filtering MoM city trends (unfiltered)
 let overallNpsData = []; // Cached data for filtering top/bottom leaderboards
+let overallCityData = []; // Cached data for city NPS scores
 
 let currentStartDate = null;
 let currentEndDate = null;
@@ -283,7 +289,9 @@ async function loadInsightsData() {
     
     await Promise.all([
         fetchTopBottomNps(queryParams),
-        fetchNpsTrends(queryParams)
+        fetchCityNps(queryParams),
+        fetchNpsTrends(), // Unfiltered by date
+        fetchCityTrends() // Unfiltered by date
     ]);
 }
 
@@ -300,6 +308,72 @@ async function fetchTopBottomNps(queryParams = '') {
         console.error('Error fetching top-bottom NPS:', err);
         showToast('Failed to load store leaderboards.', 'danger');
     }
+}
+
+async function fetchCityNps(queryParams = '') {
+    try {
+        const response = await fetch(`/api/analytics/nps/cities${queryParams}`);
+        const data = await response.json();
+        if (data.success) {
+            overallCityData = data.data;
+            renderCityNpsChart();
+        }
+    } catch (err) {
+        console.error('Error fetching City NPS:', err);
+        showToast('Failed to load city-wise NPS.', 'danger');
+    }
+}
+
+function renderCityNpsChart() {
+    const ctx = document.getElementById('chartCityNps').getContext('2d');
+    
+    if (chartCityNpsInstance) {
+        chartCityNpsInstance.destroy();
+    }
+    
+    const labels = overallCityData.map(d => d.city);
+    const values = overallCityData.map(d => d.nps_score);
+    
+    chartCityNpsInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'NPS Score',
+                data: values,
+                backgroundColor: 'rgba(253, 224, 71, 0.85)',
+                borderColor: 'rgba(253, 224, 71, 1)',
+                borderWidth: 1,
+                borderRadius: 6,
+                hoverBackgroundColor: 'rgba(253, 224, 71, 0.3)'
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: (context) => ` NPS: ${context.parsed.x}`
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    min: -100,
+                    max: 100,
+                    grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                    ticks: { color: '#94a3b8' }
+                },
+                y: {
+                    grid: { display: false },
+                    ticks: { color: '#f8fafc', font: { size: 11 } }
+                }
+            }
+        }
+    });
 }
 
 function populateAreaFilter() {
@@ -409,14 +483,16 @@ function renderLeaderboardChart(canvasId, dataset, color, hoverColor, isTopChart
     }
 }
 
-async function fetchNpsTrends(queryParams = '') {
+async function fetchNpsTrends() {
     try {
-        const response = await fetch(`/api/analytics/nps/trends${queryParams}`);
+        const response = await fetch('/api/analytics/nps/trends');
         const data = await response.json();
         if (data.success) {
             npsTrendsData = data.data;
-            populateStoreFilter();
-            renderTrendsChart();
+            if (trendMode.value === 'STORE') {
+                populateStoreFilter();
+                renderTrendsChart();
+            }
         }
     } catch (err) {
         console.error('Error fetching NPS trends:', err);
@@ -424,23 +500,58 @@ async function fetchNpsTrends(queryParams = '') {
     }
 }
 
+async function fetchCityTrends() {
+    try {
+        const response = await fetch('/api/analytics/nps/city-trends');
+        const data = await response.json();
+        if (data.success) {
+            cityTrendsData = data.data;
+            if (trendMode.value === 'CITY') {
+                populateStoreFilter();
+                renderTrendsChart();
+            }
+        }
+    } catch (err) {
+        console.error('Error fetching City trends:', err);
+    }
+}
+
 function populateStoreFilter() {
-    const branches = [...new Set(npsTrendsData.map(d => d.branch))].sort();
+    const mode = trendMode.value;
     const currentVal = storeFilter.value;
     
-    storeFilter.innerHTML = '<option value="ALL">All Branches Average</option>';
-    
-    branches.forEach(b => {
-        const opt = document.createElement('option');
-        opt.value = b;
-        opt.textContent = b;
-        storeFilter.appendChild(opt);
-    });
-    
-    if (currentVal && branches.includes(currentVal)) {
-        storeFilter.value = currentVal;
+    if (mode === 'STORE') {
+        const branches = [...new Set(npsTrendsData.map(d => d.branch))].sort();
+        storeFilter.innerHTML = '<option value="ALL">All Stores Average</option>';
+        
+        branches.forEach(b => {
+            const opt = document.createElement('option');
+            opt.value = b;
+            opt.textContent = b;
+            storeFilter.appendChild(opt);
+        });
+        
+        if (currentVal && branches.includes(currentVal)) {
+            storeFilter.value = currentVal;
+        } else {
+            storeFilter.value = 'ALL';
+        }
     } else {
-        storeFilter.value = 'ALL';
+        const cities = [...new Set(cityTrendsData.map(d => d.city))].sort();
+        storeFilter.innerHTML = '<option value="ALL">All Cities Average</option>';
+        
+        cities.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c;
+            opt.textContent = c;
+            storeFilter.appendChild(opt);
+        });
+        
+        if (currentVal && cities.includes(currentVal)) {
+            storeFilter.value = currentVal;
+        } else {
+            storeFilter.value = 'ALL';
+        }
     }
 }
 
@@ -457,6 +568,20 @@ function setupFilters() {
     btnApplyCustomDate.addEventListener('click', () => {
         handleCustomDateApply();
     });
+    trendMode.addEventListener('change', () => {
+        handleTrendModeChange();
+    });
+}
+
+function handleTrendModeChange() {
+    const mode = trendMode.value;
+    if (mode === 'STORE') {
+        compareFilterLabel.innerHTML = '<i class="fa-solid fa-store"></i> Select Store:';
+    } else {
+        compareFilterLabel.innerHTML = '<i class="fa-solid fa-city"></i> Select City:';
+    }
+    populateStoreFilter();
+    renderTrendsChart();
 }
 
 function handleDatePresetChange() {
@@ -534,26 +659,47 @@ function renderTrendsChart() {
         chartTrendsInstance.destroy();
     }
     
+    const mode = trendMode.value;
     const filterVal = storeFilter.value;
-    const allMonths = [...new Set(npsTrendsData.map(d => d.month_key))].sort();
     
+    let allMonths = [];
     let chartData = [];
     let label = '';
     
-    if (filterVal === 'ALL') {
-        label = 'All Branches Average NPS';
-        chartData = allMonths.map(month => {
-            const monthRecords = npsTrendsData.filter(d => d.month_key === month);
-            if (monthRecords.length === 0) return 0;
-            const sum = monthRecords.reduce((acc, curr) => acc + parseFloat(curr.nps_score), 0);
-            return parseFloat((sum / monthRecords.length).toFixed(1));
-        });
+    if (mode === 'STORE') {
+        allMonths = [...new Set(npsTrendsData.map(d => d.month_key))].sort();
+        if (filterVal === 'ALL') {
+            label = 'All Stores Average NPS';
+            chartData = allMonths.map(month => {
+                const monthRecords = npsTrendsData.filter(d => d.month_key === month);
+                if (monthRecords.length === 0) return 0;
+                const sum = monthRecords.reduce((acc, curr) => acc + parseFloat(curr.nps_score), 0);
+                return parseFloat((sum / monthRecords.length).toFixed(1));
+            });
+        } else {
+            label = `${filterVal} NPS Trend`;
+            chartData = allMonths.map(month => {
+                const record = npsTrendsData.find(d => d.branch === filterVal && d.month_key === month);
+                return record ? parseFloat(record.nps_score) : null;
+            });
+        }
     } else {
-        label = `${filterVal} NPS Trend`;
-        chartData = allMonths.map(month => {
-            const record = npsTrendsData.find(d => d.branch === filterVal && d.month_key === month);
-            return record ? parseFloat(record.nps_score) : null; // returns null for months without data
-        });
+        allMonths = [...new Set(cityTrendsData.map(d => d.month_key))].sort();
+        if (filterVal === 'ALL') {
+            label = 'All Cities Average NPS';
+            chartData = allMonths.map(month => {
+                const monthRecords = cityTrendsData.filter(d => d.month_key === month);
+                if (monthRecords.length === 0) return 0;
+                const sum = monthRecords.reduce((acc, curr) => acc + parseFloat(curr.nps_score), 0);
+                return parseFloat((sum / monthRecords.length).toFixed(1));
+            });
+        } else {
+            label = `${filterVal} NPS Trend`;
+            chartData = allMonths.map(month => {
+                const record = cityTrendsData.find(d => d.city === filterVal && d.month_key === month);
+                return record ? parseFloat(record.nps_score) : null;
+            });
+        }
     }
     
     const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];

@@ -308,11 +308,10 @@ app.get('/api/analytics/nps/top-bottom', async (req, res) => {
   }
 });
 
-// API endpoint to retrieve Month-on-Month NPS trends for stores
+// API endpoint to retrieve Month-on-Month NPS trends for stores (unfiltered by date)
 app.get('/api/analytics/nps/trends', async (req, res) => {
   try {
-    const { startDate, endDate } = req.query;
-    let query = `
+    const query = `
       SELECT 
         b.branch_name AS branch,
         b.area,
@@ -324,23 +323,70 @@ app.get('/api/analytics/nps/trends', async (req, res) => {
       FROM feedbacks f
       JOIN branches b ON f.branch_id = b.branch_id
       WHERE f.business_date IS NOT NULL
+      GROUP BY b.branch_id, month_key
+      ORDER BY month_key ASC, nps_score DESC
+    `;
+    const [rows] = await pool.execute(query);
+    res.json({ success: true, data: rows });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Failed to fetch NPS trend stats.', error: err.message });
+  }
+});
+
+// API endpoint to retrieve overall City NPS scores (date filtered)
+app.get('/api/analytics/nps/cities', async (req, res) => {
+  try {
+    const { startDate, endDate } = req.query;
+    let query = `
+      SELECT 
+        b.area AS city,
+        COUNT(*) as total_responses,
+        SUM(CASE WHEN f.recommend = 'Definitely Yes' THEN 1 ELSE 0 END) as promoters,
+        SUM(CASE WHEN f.recommend IN ('Probably not', 'Definitely not') THEN 1 ELSE 0 END) as detractors,
+        ROUND(((SUM(CASE WHEN f.recommend = 'Definitely Yes' THEN 1 ELSE 0 END) - SUM(CASE WHEN f.recommend IN ('Probably not', 'Definitely not') THEN 1 ELSE 0 END)) / COUNT(*)) * 100, 1) as nps_score
+      FROM feedbacks f
+      JOIN branches b ON f.branch_id = b.branch_id
     `;
     
     const params = [];
     if (startDate && endDate) {
-      query += ` AND f.business_date BETWEEN ? AND ?`;
+      query += ` WHERE f.business_date BETWEEN ? AND ?`;
       params.push(startDate, endDate);
     }
     
     query += `
-      GROUP BY b.branch_id, month_key
-      ORDER BY month_key ASC, nps_score DESC
+      GROUP BY b.area
+      ORDER BY nps_score DESC
     `;
     
     const [rows] = await pool.execute(query, params);
     res.json({ success: true, data: rows });
   } catch (err) {
-    res.status(500).json({ success: false, message: 'Failed to fetch NPS trend stats.', error: err.message });
+    res.status(500).json({ success: false, message: 'Failed to fetch City NPS stats.', error: err.message });
+  }
+});
+
+// API endpoint to retrieve Month-on-Month NPS trends for cities (unfiltered by date)
+app.get('/api/analytics/nps/city-trends', async (req, res) => {
+  try {
+    const query = `
+      SELECT 
+        b.area AS city,
+        DATE_FORMAT(f.business_date, '%Y-%m') as month_key,
+        COUNT(*) as total_responses,
+        SUM(CASE WHEN f.recommend = 'Definitely Yes' THEN 1 ELSE 0 END) as promoters,
+        SUM(CASE WHEN f.recommend IN ('Probably not', 'Definitely not') THEN 1 ELSE 0 END) as detractors,
+        ROUND(((SUM(CASE WHEN f.recommend = 'Definitely Yes' THEN 1 ELSE 0 END) - SUM(CASE WHEN f.recommend IN ('Probably not', 'Definitely not') THEN 1 ELSE 0 END)) / COUNT(*)) * 100, 1) as nps_score
+      FROM feedbacks f
+      JOIN branches b ON f.branch_id = b.branch_id
+      WHERE f.business_date IS NOT NULL
+      GROUP BY b.area, month_key
+      ORDER BY month_key ASC, nps_score DESC
+    `;
+    const [rows] = await pool.execute(query);
+    res.json({ success: true, data: rows });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Failed to fetch City NPS trend stats.', error: err.message });
   }
 });
 
