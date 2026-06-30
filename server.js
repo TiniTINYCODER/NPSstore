@@ -87,6 +87,30 @@ function parseDateTime(dateTimeStr) {
   return new Date();
 }
 
+// Clean and normalize branch names to strip redundant city suffixes
+function normalizeBranchName(branchName) {
+  if (!branchName) return 'Unknown Branch';
+  // Split on comma and take first part (e.g. "JARIPATAKA,NAGPUR" -> "JARIPATAKA")
+  let cleanName = branchName.split(',')[0].trim();
+  // Replace multiple spaces with a single space
+  cleanName = cleanName.replace(/\s+/g, ' ');
+  return cleanName;
+}
+
+// Normalize area/city names to handle twin cities or spelling variations
+function normalizeAreaName(areaName) {
+  if (!areaName) return 'Unknown Area';
+  let cleanArea = areaName.trim().replace(/\s+/g, ' ');
+  const lower = cleanArea.toLowerCase();
+  
+  if (lower.includes('nagpur')) return 'Nagpur City';
+  if (lower.includes('bhilai')) return 'Bhilai';
+  if (lower.includes('bilaspur')) return 'Bilaspur';
+  if (lower.includes('raipur')) return 'Raipur';
+  
+  return cleanArea;
+}
+
 // Clean and normalize keys from CSV headers (strip spaces, lower case, replace spaces with underscores)
 function normalizeRow(row) {
   const normalized = {};
@@ -141,9 +165,9 @@ app.post('/api/upload', upload.single('csvFile'), async (req, res) => {
           const row = results[i];
           
           try {
-            // 1. Resolve Branch ID (Normalize whitespace and collapse multiple spaces)
-            const branchName = (row.branch || 'Unknown Branch').trim().replace(/\s+/g, ' ');
-            const areaName = (row.area || 'Unknown Area').trim().replace(/\s+/g, ' ');
+            // 1. Resolve Branch ID (Normalize names and strip redundant city suffixes)
+            const branchName = normalizeBranchName(row.branch);
+            const areaName = normalizeAreaName(row.area);
             
             const [existingBranches] = await connection.execute(
               'SELECT branch_id FROM branches WHERE branch_name = ? AND area = ?',
