@@ -620,3 +620,47 @@ tr:hover td {
 .trend-wrapper {
     height: 380px;
 }
+
+/* --- Global Date Filter Styling --- */
+.date-filter-card {
+    padding: 1.25rem 2rem;
+}
+
+.date-filter-bar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 2rem;
+}
+
+.custom-date-container {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1.25rem;
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+.form-input {
+    background-color: rgba(15, 23, 42, 0.8);
+    border: 1px solid var(--card-border);
+    color: var(--text-primary);
+    padding: 0.5rem 1rem;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    font-family: var(--font-body);
+    font-weight: 500;
+    outline: none;
+    transition: var(--transition);
+}
+
+.form-input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 8px var(--accent-glow);
+}
+
+::-webkit-calendar-picker-indicator {
+    filter: invert(1) sepia(50%) saturate(1000%) hue-rotate(180deg);
+    cursor: pointer;
+}
+

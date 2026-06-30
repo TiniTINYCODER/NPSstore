@@ -25,6 +25,13 @@ const panelInsights = document.getElementById('panelInsights');
 const storeFilter = document.getElementById('storeFilter');
 const areaFilter = document.getElementById('areaFilter');
 
+// Date Filter Elements
+const datePreset = document.getElementById('datePreset');
+const customDateContainer = document.getElementById('customDateContainer');
+const startDateInput = document.getElementById('startDate');
+const endDateInput = document.getElementById('endDate');
+const btnApplyCustomDate = document.getElementById('btnApplyCustomDate');
+
 let selectedFile = null;
 
 // Chart JS Instances
@@ -33,6 +40,9 @@ let chartBottomNpsInstance = null;
 let chartTrendsInstance = null;
 let npsTrendsData = []; // Cached data for filtering MoM trends
 let overallNpsData = []; // Cached data for filtering top/bottom leaderboards
+
+let currentStartDate = null;
+let currentEndDate = null;
 
 // --- Initialize App ---
 document.addEventListener('DOMContentLoaded', () => {
@@ -265,15 +275,21 @@ function escapeHTML(str) {
 
 async function loadInsightsData() {
     showToast('Updating store NPS metrics...', 'info');
+    
+    let queryParams = '';
+    if (currentStartDate && currentEndDate) {
+        queryParams = `?startDate=${currentStartDate}&endDate=${currentEndDate}`;
+    }
+    
     await Promise.all([
-        fetchTopBottomNps(),
-        fetchNpsTrends()
+        fetchTopBottomNps(queryParams),
+        fetchNpsTrends(queryParams)
     ]);
 }
 
-async function fetchTopBottomNps() {
+async function fetchTopBottomNps(queryParams = '') {
     try {
-        const response = await fetch('/api/analytics/nps/top-bottom');
+        const response = await fetch(`/api/analytics/nps/top-bottom${queryParams}`);
         const data = await response.json();
         if (data.success) {
             overallNpsData = data.data;
@@ -393,9 +409,9 @@ function renderLeaderboardChart(canvasId, dataset, color, hoverColor, isTopChart
     }
 }
 
-async function fetchNpsTrends() {
+async function fetchNpsTrends(queryParams = '') {
     try {
-        const response = await fetch('/api/analytics/nps/trends');
+        const response = await fetch(`/api/analytics/nps/trends${queryParams}`);
         const data = await response.json();
         if (data.success) {
             npsTrendsData = data.data;
@@ -435,6 +451,80 @@ function setupFilters() {
     areaFilter.addEventListener('change', () => {
         filterAndRenderLeaderboards();
     });
+    datePreset.addEventListener('change', () => {
+        handleDatePresetChange();
+    });
+    btnApplyCustomDate.addEventListener('click', () => {
+        handleCustomDateApply();
+    });
+}
+
+function handleDatePresetChange() {
+    const val = datePreset.value;
+    
+    if (val === 'CUSTOM') {
+        customDateContainer.style.display = 'flex';
+        // Set default custom dates to current month range if empty
+        const now = new Date();
+        const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+        const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+        if (!startDateInput.value) startDateInput.value = firstDay;
+        if (!endDateInput.value) endDateInput.value = lastDay;
+    } else {
+        customDateContainer.style.display = 'none';
+        calculateDateRange(val);
+        loadInsightsData();
+    }
+}
+
+function calculateDateRange(preset) {
+    const now = new Date();
+    
+    switch (preset) {
+        case 'TODAY': {
+            const todayStr = now.toISOString().split('T')[0];
+            currentStartDate = todayStr;
+            currentEndDate = todayStr;
+            break;
+        }
+        case 'MONTH': {
+            const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+            const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+            currentStartDate = firstDay;
+            currentEndDate = lastDay;
+            break;
+        }
+        case 'YEAR': {
+            currentStartDate = `${now.getFullYear()}-01-01`;
+            currentEndDate = `${now.getFullYear()}-12-31`;
+            break;
+        }
+        case 'ALL':
+        default: {
+            currentStartDate = null;
+            currentEndDate = null;
+            break;
+        }
+    }
+}
+
+function handleCustomDateApply() {
+    const start = startDateInput.value;
+    const end = endDateInput.value;
+    
+    if (!start || !end) {
+        showToast('Please select both start and end dates.', 'danger');
+        return;
+    }
+    
+    if (new Date(start) > new Date(end)) {
+        showToast('Start date cannot be after end date.', 'danger');
+        return;
+    }
+    
+    currentStartDate = start;
+    currentEndDate = end;
+    loadInsightsData();
 }
 
 function renderTrendsChart() {

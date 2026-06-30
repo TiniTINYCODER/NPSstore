@@ -277,7 +277,8 @@ app.get('/api/feedbacks', async (req, res) => {
 // API endpoint to retrieve top & bottom 10 stores based on overall NPS
 app.get('/api/analytics/nps/top-bottom', async (req, res) => {
   try {
-    const query = `
+    const { startDate, endDate } = req.query;
+    let query = `
       SELECT 
         b.branch_name AS branch, 
         b.area,
@@ -287,10 +288,20 @@ app.get('/api/analytics/nps/top-bottom', async (req, res) => {
         ROUND(((SUM(CASE WHEN f.recommend = 'Definitely Yes' THEN 1 ELSE 0 END) - SUM(CASE WHEN f.recommend IN ('Probably not', 'Definitely not') THEN 1 ELSE 0 END)) / COUNT(*)) * 100, 1) as nps_score
       FROM feedbacks f
       JOIN branches b ON f.branch_id = b.branch_id
+    `;
+    
+    const params = [];
+    if (startDate && endDate) {
+      query += ` WHERE f.business_date BETWEEN ? AND ?`;
+      params.push(startDate, endDate);
+    }
+    
+    query += `
       GROUP BY b.branch_id
       ORDER BY nps_score DESC
     `;
-    const [rows] = await pool.execute(query);
+    
+    const [rows] = await pool.execute(query, params);
     res.json({ success: true, data: rows });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Failed to fetch top/bottom NPS stats.', error: err.message });
@@ -300,7 +311,8 @@ app.get('/api/analytics/nps/top-bottom', async (req, res) => {
 // API endpoint to retrieve Month-on-Month NPS trends for stores
 app.get('/api/analytics/nps/trends', async (req, res) => {
   try {
-    const query = `
+    const { startDate, endDate } = req.query;
+    let query = `
       SELECT 
         b.branch_name AS branch,
         b.area,
@@ -312,10 +324,20 @@ app.get('/api/analytics/nps/trends', async (req, res) => {
       FROM feedbacks f
       JOIN branches b ON f.branch_id = b.branch_id
       WHERE f.business_date IS NOT NULL
+    `;
+    
+    const params = [];
+    if (startDate && endDate) {
+      query += ` AND f.business_date BETWEEN ? AND ?`;
+      params.push(startDate, endDate);
+    }
+    
+    query += `
       GROUP BY b.branch_id, month_key
       ORDER BY month_key ASC, nps_score DESC
     `;
-    const [rows] = await pool.execute(query);
+    
+    const [rows] = await pool.execute(query, params);
     res.json({ success: true, data: rows });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Failed to fetch NPS trend stats.', error: err.message });

@@ -132,6 +132,32 @@
                         <p>Performance analysis and Net Promoter Score tracking across branches</p>
                     </div>
                 </header>
+                <!-- Global Dashboard Date Filter Card -->
+                <div class="card date-filter-card">
+                    <div class="date-filter-bar">
+                        <div class="filter-controls">
+                            <label for="datePreset"><i class="fa-regular fa-calendar-days"></i> Period Preset:</label>
+                            <select id="datePreset" class="form-select">
+                                <option value="ALL">All Time</option>
+                                <option value="TODAY">Today</option>
+                                <option value="MONTH">This Month</option>
+                                <option value="YEAR">This Year</option>
+                                <option value="CUSTOM">Custom Date Range...</option>
+                            </select>
+                        </div>
+                        <div id="customDateContainer" class="custom-date-container" style="display: none;">
+                            <div class="filter-controls">
+                                <label for="startDate">From:</label>
+                                <input type="date" id="startDate" class="form-input">
+                            </div>
+                            <div class="filter-controls">
+                                <label for="endDate">To:</label>
+                                <input type="date" id="endDate" class="form-input">
+                            </div>
+                            <button id="btnApplyCustomDate" class="btn btn-secondary btn-sm"><i class="fa-solid fa-check"></i> Apply</button>
+                        </div>
+                    </div>
+                </div>
 
                 <div class="analytics-grid">
                     <!-- Top & Bottom NPS Card -->
