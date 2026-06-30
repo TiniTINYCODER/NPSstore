@@ -4,16 +4,18 @@ const mysql = require('mysql2/promise');
 const csv = require('csv-parser');
 const fs = require('fs');
 const path = require('path');
+const { Readable } = require('stream');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Set up MySQL connection pool
+// Set up MySQL connection pool (with Env Variable fallbacks for Vercel compatibility)
 const dbConfig = {
-  host: 'localhost',
-  user: 'root',
-  password: 'Tgyhuji@4321',
-  database: 'customer_feedback',
+  host: process.env.DB_HOST || 'localhost',
+  user: process.env.DB_USER || 'root',
+  password: process.env.DB_PASSWORD || 'Tgyhuji@4321',
+  database: process.env.DB_NAME || 'customer_feedback',
+  port: process.env.DB_PORT ? parseInt(process.env.DB_PORT) : 3306,
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0
@@ -21,8 +23,8 @@ const dbConfig = {
 
 const pool = mysql.createPool(dbConfig);
 
-// Configure multer for file upload
-const upload = multer({ dest: 'uploads/' });
+// Configure multer for file upload (using memory storage for serverless support)
+const upload = multer({ storage: multer.memoryStorage() });
 
 // Serve static frontend files
 app.use(express.static(path.join(__dirname, 'public')));
@@ -101,20 +103,13 @@ app.post('/api/upload', upload.single('csvFile'), async (req, res) => {
     return res.status(400).json({ success: false, message: 'No file uploaded.' });
   }
 
-  const filePath = req.file.path;
   const results = [];
   
-  // Read and parse the CSV
-  fs.createReadStream(filePath)
+  // Read and parse the CSV from memory buffer
+  Readable.from(req.file.buffer)
     .pipe(csv())
     .on('data', (data) => results.push(normalizeRow(data)))
     .on('end', async () => {
-      // Delete temporary file after loading to memory
-      try {
-        fs.unlinkSync(filePath);
-      } catch (err) {
-        console.error('Failed to delete temp file:', err);
-      }
 
       if (results.length === 0) {
         return res.status(400).json({ success: false, message: 'The uploaded CSV file is empty.' });
@@ -328,7 +323,11 @@ app.get('/api/analytics/nps/trends', async (req, res) => {
 });
 
 
-// Start Express server
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-});
+// Start Express server locally (Vercel will wrap and export this)
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+  });
+}
+
+module.exports = app;
