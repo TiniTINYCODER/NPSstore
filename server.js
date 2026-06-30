@@ -23,6 +23,111 @@ const dbConfig = {
 
 const pool = mysql.createPool(dbConfig);
 
+// Database migration script to automatically merge spacing duplicates and naming variations
+async function runDatabaseMigration() {
+  let connection;
+  try {
+    connection = await pool.getConnection();
+    console.log('Running database consistency migration...');
+    
+    // 1. Merge duplicate branches
+    const [branches] = await connection.execute('SELECT branch_id, branch_name, area FROM branches');
+    const branchGroups = {};
+    
+    for (const b of branches) {
+      const normName = normalizeBranchName(b.branch_name);
+      const normArea = normalizeAreaName(b.area);
+      const key = `${normName}|||${normArea}`;
+      
+      if (!branchGroups[key]) {
+        branchGroups[key] = [];
+      }
+      branchGroups[key].push(b);
+    }
+    
+    for (const key of Object.keys(branchGroups)) {
+      const group = branchGroups[key];
+      const [normName, normArea] = key.split('|||');
+      
+      const primaryBranch = group[0];
+      
+      // Update primary branch to normalized string
+      await connection.execute(
+        'UPDATE branches SET branch_name = ?, area = ? WHERE branch_id = ?',
+        [normName, normArea, primaryBranch.branch_id]
+      );
+      
+      // Merge duplicate branches into primary
+      for (let i = 1; i < group.length; i++) {
+        const dupBranch = group[i];
+        console.log(`Merging branch ${dupBranch.branch_name} (${dupBranch.branch_id}) into ${normName} (${primaryBranch.branch_id})`);
+        
+        // Update feedbacks referencing duplicate branch
+        await connection.execute(
+          'UPDATE feedbacks SET branch_id = ? WHERE branch_id = ?',
+          [primaryBranch.branch_id, dupBranch.branch_id]
+        );
+        
+        // Delete duplicate branch
+        await connection.execute(
+          'DELETE FROM branches WHERE branch_id = ?',
+          [dupBranch.branch_id]
+        );
+      }
+    }
+    
+    // 2. Merge duplicate customers
+    const [customers] = await connection.execute('SELECT customer_id, user_name, mobile FROM customers');
+    const customerGroups = {};
+    
+    for (const c of customers) {
+      const normUser = c.user_name.trim().replace(/\s+/g, ' ');
+      const normMobile = c.mobile.trim().replace(/\s+/g, '');
+      const key = `${normUser}|||${normMobile}`;
+      
+      if (!customerGroups[key]) {
+        customerGroups[key] = [];
+      }
+      customerGroups[key].push(c);
+    }
+    
+    for (const key of Object.keys(customerGroups)) {
+      const group = customerGroups[key];
+      const [normUser, normMobile] = key.split('|||');
+      
+      const primaryCustomer = group[0];
+      await connection.execute(
+        'UPDATE customers SET user_name = ?, mobile = ? WHERE customer_id = ?',
+        [normUser, normMobile, primaryCustomer.customer_id]
+      );
+      
+      for (let i = 1; i < group.length; i++) {
+        const dupCustomer = group[i];
+        console.log(`Merging customer ${dupCustomer.user_name} into ${normUser}`);
+        
+        await connection.execute(
+          'UPDATE feedbacks SET customer_id = ? WHERE customer_id = ?',
+          [primaryCustomer.customer_id, dupCustomer.customer_id]
+        );
+        
+        await connection.execute(
+          'DELETE FROM customers WHERE customer_id = ?',
+          [dupCustomer.customer_id]
+        );
+      }
+    }
+    
+    console.log('Database consistency migration completed successfully.');
+  } catch (err) {
+    console.error('Database migration failed:', err);
+  } finally {
+    if (connection) connection.release();
+  }
+}
+
+// Execute migration
+runDatabaseMigration();
+
 // Configure multer for file upload (using memory storage for serverless support)
 const upload = multer({ storage: multer.memoryStorage() });
 
