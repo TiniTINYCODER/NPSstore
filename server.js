@@ -141,9 +141,9 @@ app.post('/api/upload', upload.single('csvFile'), async (req, res) => {
           const row = results[i];
           
           try {
-            // 1. Resolve Branch ID
-            const branchName = row.branch || 'Unknown Branch';
-            const areaName = row.area || 'Unknown Area';
+            // 1. Resolve Branch ID (Normalize whitespace and collapse multiple spaces)
+            const branchName = (row.branch || 'Unknown Branch').trim().replace(/\s+/g, ' ');
+            const areaName = (row.area || 'Unknown Area').trim().replace(/\s+/g, ' ');
             
             const [existingBranches] = await connection.execute(
               'SELECT branch_id FROM branches WHERE branch_name = ? AND area = ?',
@@ -162,9 +162,9 @@ app.post('/api/upload', upload.single('csvFile'), async (req, res) => {
               branchCount++;
             }
 
-            // 2. Resolve Customer ID
-            const userName = row.user_name || 'Guest Customer';
-            const mobileNumber = row.mobile || '0000000000';
+            // 2. Resolve Customer ID (Normalize whitespace and collapse spaces/strip spaces in mobile)
+            const userName = (row.user_name || 'Guest Customer').trim().replace(/\s+/g, ' ');
+            const mobileNumber = (row.mobile || '0000000000').trim().replace(/\s+/g, '');
             
             const [existingCustomers] = await connection.execute(
               'SELECT customer_id FROM customers WHERE user_name = ? AND mobile = ?',
