@@ -1,0 +1,16 @@
+{
+  "name": "customer-feedback-dashboard",
+  "version": "1.0.0",
+  "description": "Backend Admin page and CSV uploader for customer feedback database",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "csv-parser": "^3.1.2",
+    "express": "^4.21.2",
+    "multer": "^1.4.5-lts.1",
+    "mysql2": "^3.12.0"
+  }
+}

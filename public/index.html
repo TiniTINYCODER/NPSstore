@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Feedback Admin Portal</title>
+    <!-- Modern Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Premium Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js for data visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="glass-bg"></div>
+    <div class="app-container">
+        <!-- Sidebar / Navigation -->
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="brand-icon">
+                    <i class="fa-solid fa-chart-line"></i>
+                </div>
+                <h2>Feedback IQ</h2>
+            </div>
+            <nav class="nav-menu">
+                <a href="#" class="nav-item active" id="btnNavImport"><i class="fa-solid fa-upload"></i> Data Import</a>
+                <a href="#" class="nav-item" id="btnNavInsights"><i class="fa-solid fa-chart-pie"></i> Store Insights</a>
+                <a href="#" class="nav-item disabled"><i class="fa-solid fa-users"></i> Customers (Next Phase)</a>
+            </nav>
+            <div class="system-status">
+                <div class="status-indicator online"></div>
+                <span>Database Connected</span>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            
+            <!-- View 1: Data Ingestion Panel -->
+            <div id="panelImport" class="spa-panel">
+                <header class="top-bar">
+                    <div class="page-title">
+                        <h1>Data Ingestion Center</h1>
+                        <p>Upload customer feedback CSV files to populate the database tables</p>
+                    </div>
+                </header>
+
+                <div class="content-grid">
+                    <!-- CSV Upload Section -->
+                    <section class="card upload-card">
+                        <div class="card-header">
+                            <h2><i class="fa-solid fa-file-csv"></i> CSV Upload</h2>
+                            <span class="badge">Feedback Schema v1.1</span>
+                        </div>
+                        <div class="upload-dropzone" id="dropzone">
+                            <i class="fa-solid fa-cloud-arrow-up cloud-icon"></i>
+                            <h3>Drag & Drop CSV File</h3>
+                            <p>or click to browse your files</p>
+                            <input type="file" id="fileInput" accept=".csv" style="display: none;">
+                            <div class="file-info" id="fileInfo" style="display: none;">
+                                <i class="fa-regular fa-file-excel"></i>
+                                <span id="fileName">data.csv</span>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary" id="uploadBtn" disabled>
+                            <i class="fa-solid fa-rocket"></i> Import to Database
+                        </button>
+
+                        <!-- Import Progress/Stats -->
+                        <div id="statsSection" class="stats-panel" style="display: none;">
+                            <h3><i class="fa-solid fa-square-poll-vertical"></i> Import Summary</h3>
+                            <div class="metrics-grid">
+                                <div class="metric-box">
+                                    <span class="val" id="statProcessed">0</span>
+                                    <span class="lbl">Processed</span>
+                                </div>
+                                <div class="metric-box success">
+                                    <span class="val" id="statSuccess">0</span>
+                                    <span class="lbl">Succeeded</span>
+                                </div>
+                                <div class="metric-box info">
+                                    <span class="val" id="statBranches">0</span>
+                                    <span class="lbl">New Branches</span>
+                                </div>
+                            </div>
+                            <div id="errorPanel" class="error-panel" style="display: none;">
+                                <h4><i class="fa-solid fa-triangle-exclamation"></i> Errors Encountered (First 5 shown):</h4>
+                                <ul id="errorList"></ul>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Data Preview Section -->
+                    <section class="card preview-card">
+                        <div class="card-header">
+                            <h2><i class="fa-solid fa-table"></i> Recent Feedback Records</h2>
+                            <button class="btn btn-secondary btn-sm" id="refreshBtn"><i class="fa-solid fa-arrows-rotate"></i> Refresh</button>
+                        </div>
+                        <div class="table-container">
+                            <table id="feedbackTable">
+                                <thead>
+                                    <tr>
+                                        <th>Bill No</th>
+                                        <th>Date</th>
+                                        <th>Branch</th>
+                                        <th>Customer</th>
+                                        <th>Ambience</th>
+                                        <th>Cleanliness</th>
+                                        <th>Staff</th>
+                                        <th>Recommend</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr class="empty-state">
+                                        <td colspan="8">No records loaded yet. Upload a CSV to populate.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+                </div>
+            </div>
+
+            <!-- View 2: Store Insights Panel -->
+            <div id="panelInsights" class="spa-panel" style="display: none;">
+                <header class="top-bar">
+                    <div class="page-title">
+                        <h1>Store NPS Dashboard</h1>
+                        <p>Performance analysis and Net Promoter Score tracking across branches</p>
+                    </div>
+                </header>
+
+                <div class="analytics-grid">
+                    <!-- Top & Bottom NPS Card -->
+                    <div class="card chart-card">
+                        <div class="card-header">
+                            <h2><i class="fa-solid fa-ranking-star"></i> Store NPS Performance</h2>
+                            <span class="badge">NPS Range (-100 to +100)</span>
+                        </div>
+                        
+                        <div class="leaderboard-grid">
+                            <div class="chart-container">
+                                <h3 class="chart-title top-title"><i class="fa-solid fa-arrow-trend-up"></i> Top 10 Branches NPS</h3>
+                                <div class="chart-wrapper">
+                                    <canvas id="chartTopNps"></canvas>
+                                </div>
+                            </div>
+                            <div class="chart-container">
+                                <h3 class="chart-title bottom-title"><i class="fa-solid fa-arrow-trend-down"></i> Bottom 10 Branches NPS</h3>
+                                <div class="chart-wrapper">
+                                    <canvas id="chartBottomNps"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Month-on-Month Trends Card -->
+                    <div class="card chart-card">
+                        <div class="card-header trend-header">
+                            <h2><i class="fa-solid fa-chart-line"></i> Month-on-Month NPS Trends</h2>
+                            <div class="filter-controls">
+                                <label for="storeFilter"><i class="fa-solid fa-store"></i> Compare Branch:</label>
+                                <select id="storeFilter" class="form-select">
+                                    <option value="ALL">All Branches Average</option>
+                                    <!-- Populated dynamically -->
+                                </select>
+                            </div>
+                        </div>
+                        <div class="chart-container trend-container">
+                            <div class="chart-wrapper trend-wrapper">
+                                <canvas id="chartNpsTrends"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="toast">
+        <i class="toast-icon fa-solid fa-circle-info"></i>
+        <span id="toastMsg">Notification message</span>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
