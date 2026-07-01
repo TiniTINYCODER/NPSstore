@@ -412,9 +412,9 @@ app.get('/api/analytics/nps/top-bottom', async (req, res) => {
         b.branch_name AS branch, 
         b.area,
         COUNT(*) as total_responses,
-        SUM(CASE WHEN f.recommend = 'Definitely Yes' THEN 1 ELSE 0 END) as promoters,
+        SUM(CASE WHEN f.recommend IN ('Definitely Yes', 'Probably Yes') THEN 1 ELSE 0 END) as promoters,
         SUM(CASE WHEN f.recommend IN ('Probably not', 'Definitely not') THEN 1 ELSE 0 END) as detractors,
-        ROUND(((SUM(CASE WHEN f.recommend = 'Definitely Yes' THEN 1 ELSE 0 END) - SUM(CASE WHEN f.recommend IN ('Probably not', 'Definitely not') THEN 1 ELSE 0 END)) / COUNT(*)) * 100, 1) as nps_score
+        ROUND(((SUM(CASE WHEN f.recommend IN ('Definitely Yes', 'Probably Yes') THEN 1 ELSE 0 END) - SUM(CASE WHEN f.recommend IN ('Probably not', 'Definitely not') THEN 1 ELSE 0 END)) / COUNT(*)) * 100, 1) as nps_score
       FROM feedbacks f
       JOIN branches b ON f.branch_id = b.branch_id
     `;
@@ -446,9 +446,9 @@ app.get('/api/analytics/nps/trends', async (req, res) => {
         b.area,
         DATE_FORMAT(f.business_date, '%Y-%m') as month_key,
         COUNT(*) as total_responses,
-        SUM(CASE WHEN f.recommend = 'Definitely Yes' THEN 1 ELSE 0 END) as promoters,
+        SUM(CASE WHEN f.recommend IN ('Definitely Yes', 'Probably Yes') THEN 1 ELSE 0 END) as promoters,
         SUM(CASE WHEN f.recommend IN ('Probably not', 'Definitely not') THEN 1 ELSE 0 END) as detractors,
-        ROUND(((SUM(CASE WHEN f.recommend = 'Definitely Yes' THEN 1 ELSE 0 END) - SUM(CASE WHEN f.recommend IN ('Probably not', 'Definitely not') THEN 1 ELSE 0 END)) / COUNT(*)) * 100, 1) as nps_score
+        ROUND(((SUM(CASE WHEN f.recommend IN ('Definitely Yes', 'Probably Yes') THEN 1 ELSE 0 END) - SUM(CASE WHEN f.recommend IN ('Probably not', 'Definitely not') THEN 1 ELSE 0 END)) / COUNT(*)) * 100, 1) as nps_score
       FROM feedbacks f
       JOIN branches b ON f.branch_id = b.branch_id
       WHERE f.business_date IS NOT NULL
@@ -470,9 +470,9 @@ app.get('/api/analytics/nps/cities', async (req, res) => {
       SELECT 
         b.area AS city,
         COUNT(*) as total_responses,
-        SUM(CASE WHEN f.recommend = 'Definitely Yes' THEN 1 ELSE 0 END) as promoters,
+        SUM(CASE WHEN f.recommend IN ('Definitely Yes', 'Probably Yes') THEN 1 ELSE 0 END) as promoters,
         SUM(CASE WHEN f.recommend IN ('Probably not', 'Definitely not') THEN 1 ELSE 0 END) as detractors,
-        ROUND(((SUM(CASE WHEN f.recommend = 'Definitely Yes' THEN 1 ELSE 0 END) - SUM(CASE WHEN f.recommend IN ('Probably not', 'Definitely not') THEN 1 ELSE 0 END)) / COUNT(*)) * 100, 1) as nps_score
+        ROUND(((SUM(CASE WHEN f.recommend IN ('Definitely Yes', 'Probably Yes') THEN 1 ELSE 0 END) - SUM(CASE WHEN f.recommend IN ('Probably not', 'Definitely not') THEN 1 ELSE 0 END)) / COUNT(*)) * 100, 1) as nps_score
       FROM feedbacks f
       JOIN branches b ON f.branch_id = b.branch_id
     `;
@@ -503,9 +503,9 @@ app.get('/api/analytics/nps/city-trends', async (req, res) => {
         b.area AS city,
         DATE_FORMAT(f.business_date, '%Y-%m') as month_key,
         COUNT(*) as total_responses,
-        SUM(CASE WHEN f.recommend = 'Definitely Yes' THEN 1 ELSE 0 END) as promoters,
+        SUM(CASE WHEN f.recommend IN ('Definitely Yes', 'Probably Yes') THEN 1 ELSE 0 END) as promoters,
         SUM(CASE WHEN f.recommend IN ('Probably not', 'Definitely not') THEN 1 ELSE 0 END) as detractors,
-        ROUND(((SUM(CASE WHEN f.recommend = 'Definitely Yes' THEN 1 ELSE 0 END) - SUM(CASE WHEN f.recommend IN ('Probably not', 'Definitely not') THEN 1 ELSE 0 END)) / COUNT(*)) * 100, 1) as nps_score
+        ROUND(((SUM(CASE WHEN f.recommend IN ('Definitely Yes', 'Probably Yes') THEN 1 ELSE 0 END) - SUM(CASE WHEN f.recommend IN ('Probably not', 'Definitely not') THEN 1 ELSE 0 END)) / COUNT(*)) * 100, 1) as nps_score
       FROM feedbacks f
       JOIN branches b ON f.branch_id = b.branch_id
       WHERE f.business_date IS NOT NULL
