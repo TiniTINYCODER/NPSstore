@@ -7,7 +7,7 @@ const path = require('path');
 const { Readable } = require('stream');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 
 // Set up MySQL connection pool (with Env Variable fallbacks for Vercel compatibility)
 const dbConfig = {
